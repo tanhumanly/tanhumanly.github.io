@@ -14,6 +14,11 @@
         border: 1px solid gray;
         padding: 0.5rem;
         border-radius: 4px;
+        list-style: none;
+      }
+
+      .status + .status {
+        margin-top: 1rem;
       }
     </style>
   </head>
@@ -38,7 +43,7 @@
         <button type="button" id="connectable" disabled title="Require OAuth linked">
           List Connectable Calendars
         </button>
-        <button type="button" id="connect" disabled title="Require OAuth linked">Connect first entry</button>
+        <button type="button" id="connect" disabled title="Require OAuth linked">Connect #1 calendar</button>
         <button type="button" id="disconnect" disabled title="Require OAuth linked">Disconnect</button>
       </div>
 
@@ -105,6 +110,12 @@
           status = "Microsoft calendar connected";
         }
 
+        if (calendar.type) {
+          enable('connectable');
+        } else {
+          disable('connectable');
+        }
+
         if(calendar.connected) {
           enable('disconnect')
         } else {
@@ -135,7 +146,7 @@
         }
         
         const list = entries.map(entry => `
-          <li>
+          <li class="status">
             <strong>Label:</strong> ${entry.label} <br>
             <strong>Primary:</strong> ${entry.primary} <br>
             <strong>Identifier:</strong> ${shortenString(entry.identifier)}
