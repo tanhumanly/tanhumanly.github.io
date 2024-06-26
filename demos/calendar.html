@@ -24,9 +24,11 @@
   </head>
   <body>
     <main>
+      <div id="calendar"></div>
+
       <div>
         <label for="login_hint">Login Hint</label>
-        <input type="text" id="login_hint" value="tan@humanly.io"/>
+        <input type="text" id="login_hint" value="tan@humanly.io" />
       </div>
 
       <div>
@@ -37,17 +39,26 @@
       </div>
       <br />
 
-      <div id="calendar"></div>
+      <div id="connectable_entries"></div>
 
       <div>
-        <button type="button" id="connectable" disabled title="Require OAuth linked">
+        <button
+          type="button"
+          id="connectable"
+          disabled
+          title="Require OAuth linked"
+        >
           List Connectable Calendars
         </button>
-        <button type="button" id="connect" disabled title="Require OAuth linked">Connect #1 calendar</button>
-        <button type="button" id="disconnect" disabled title="Require OAuth linked">Disconnect</button>
+        <button
+          type="button"
+          id="disconnect"
+          disabled
+          title="Require OAuth linked"
+        >
+          Disconnect
+        </button>
       </div>
-
-      <div id="connectable_entries"></div>
     </main>
 
     <script>
@@ -56,12 +67,17 @@
           const popup = window.open(url, null, "width=500,height=700");
           window.addEventListener("message", function (msg) {
             popup.close();
-            console.log(msg)
+            console.log(msg);
 
-            if (msg && msg.data && msg.data.payload && msg.data.payload.connected) {
-              enable('connectable');
+            if (
+              msg &&
+              msg.data &&
+              msg.data.payload &&
+              msg.data.payload.connected
+            ) {
+              enable("connectable");
             } else {
-              disable('connectable');
+              disable("connectable");
             }
 
             getCalendar().then(renderCalendar);
@@ -79,6 +95,16 @@
         return encodeURIComponent(document.getElementById("login_hint").value);
       }
 
+      function addEventListener(eventName, selector, handler) {
+        document.addEventListener(eventName, function (event) {
+          const target = event.target;
+
+          if (target && target.matches(selector)) {
+            handler(event);
+          }
+        });
+      }
+
       function disable(id) {
         document.getElementById(id).disabled = true;
       }
@@ -89,45 +115,53 @@
 
       function shortenString(str, maxLength = 16) {
         if (str.length > maxLength) {
-          return str.substring(0, maxLength) + '...';
+          return str.substring(0, maxLength) + "...";
         } else {
           return str;
         }
       }
 
       function renderCalendar(calendar) {
-        let status = '';
-      
-        if (calendar.type === 'google' && calendar.connected === false) {
+        let status = "";
+
+        if (calendar.type === "google" && calendar.connected === false) {
           status = "Google OAuth linked, not connected";
-        } else if (calendar.type === 'microsoft' && calendar.connected === false) {
+        } else if (
+          calendar.type === "microsoft" &&
+          calendar.connected === false
+        ) {
           status = "Microsoft OAuth linked, not connected";
         } else if (calendar.type === null) {
           status = "No OAuth linked";
-        } else if (calendar.type === 'google' && calendar.connected === true) {
+        } else if (calendar.type === "google" && calendar.connected === true) {
           status = "Google calendar connected";
-        } else if (calendar.type === 'microsoft' && calendar.connected === true) {
+        } else if (
+          calendar.type === "microsoft" &&
+          calendar.connected === true
+        ) {
           status = "Microsoft calendar connected";
         }
 
         if (calendar.type) {
-          enable('connectable');
+          enable("connectable");
         } else {
-          disable('connectable');
+          disable("connectable");
         }
 
-        if(calendar.connected) {
-          enable('disconnect')
+        if (calendar.connected) {
+          enable("disconnect");
         } else {
-          disable('disconnect');
+          disable("disconnect");
         }
-      
-        document.getElementById('calendar').innerHTML = `
+
+        document.getElementById("calendar").innerHTML = `
           <h2>Calendar</h2>
           <div>
             <p class="status"><strong>Status:</strong> ${status}</p>
             <p><strong>Connected:</strong> ${calendar.connected}</p>
-            <p><strong>Identifier:</strong> ${calendar.identifier && shortenString(calendar.identifier)}</p>
+            <p><strong>Identifier:</strong> ${
+              calendar.identifier && shortenString(calendar.identifier)
+            }</p>
             <p><strong>Label:</strong> ${calendar.label}</p>
             <p><strong>Type:</strong> ${calendar.type}</p>
           </div>
@@ -135,24 +169,33 @@
       }
 
       function renderConnectableEntries(entries) {
-        const container = document.getElementById('connectable_entries');
-        
+        const container = document.getElementById("connectable_entries");
+
         if (entries.length === 0) {
           container.innerHTML = `
             <h2>Connectable Entries</h2>
-            <p>No entries available.</p>
+            <p>No entries loaded.</p>
           `;
           return;
         }
-        
-        const list = entries.map(entry => `
+
+        const list = entries
+          .map(
+            (entry, index) => `
           <li class="status">
             <strong>Label:</strong> ${entry.label} <br>
             <strong>Primary:</strong> ${entry.primary} <br>
             <strong>Identifier:</strong> ${shortenString(entry.identifier)}
+            ${
+              index === 0
+                ? '<button type="button" id="connect" disabled title="Require OAuth linked">Connect</button>'
+                : ""
+            }
           </li>
-        `).join('');
-        
+        `
+          )
+          .join("");
+
         container.innerHTML = `
           <h2>Connectable Entries</h2>
           <ul>
@@ -160,37 +203,38 @@
           </ul>
         `;
       }
-      
 
       const origin = encodeURIComponent(window.location.href);
       // const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RzK2FwcEBodW1hbmx5LmlvIiwiZXhwIjoyMzE4MDc2MDAzLCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.Ms0F8w_fpH_c0QKee2bm5YIW0lKV2-zrY9LNAOvxbp8";
       // const API_HOST = "https://local.api.internal.humanly.io:4004";
 
-      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRhbkBodW1hbmx5LmlvIiwiZXhwIjoyMzE5MjkwODA2LCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.mL-s5WFQrgdX-2uuGfIFvXpSNC5LC97XGP3IXtcOGog";
-      const API_HOST = 'https://tan-api.internal.humanly.dev'
+      const token =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRhbkBodW1hbmx5LmlvIiwiZXhwIjoyMzE5MjkwODA2LCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.mL-s5WFQrgdX-2uuGfIFvXpSNC5LC97XGP3IXtcOGog";
+      const API_HOST = "https://tan-api.internal.humanly.dev";
       let connectable_entries = [];
       renderConnectableEntries(connectable_entries);
 
-      document.getElementById("google").addEventListener("click", function () {
+      addEventListener("click", "#google", function () {
         getOAuthUrl("google")
-        .then(({url}) => {
-          if (url) { popout(url) }
-          else { throw 'url is not returned' }
-        })
-        .then(function (msg) {
-          console.log("Received pop up results", msg);
-        });
-      });
-
-      document
-        .getElementById("microsoft")
-        .addEventListener("click", function () {
-          getOAuthUrl("microsoft")
-          .then(({url}) => popout(url))
+          .then(({ url }) => {
+            if (url) {
+              popout(url);
+            } else {
+              throw "url is not returned";
+            }
+          })
           .then(function (msg) {
             console.log("Received pop up results", msg);
           });
-        });
+      });
+
+      addEventListener("click", "#microsoft", function () {
+        getOAuthUrl("microsoft")
+          .then(({ url }) => popout(url))
+          .then(function (msg) {
+            console.log("Received pop up results", msg);
+          });
+      });
 
       const headers = new Headers({
         "Content-Type": "application/json",
@@ -204,7 +248,10 @@
       }
 
       async function getOAuthUrl(provider) {
-        return fetch(`${API_HOST}/calendar/oauth/${provider}?login_hint=${getLoginHint()}`, { headers }).then(function (res) {
+        return fetch(
+          `${API_HOST}/calendar/oauth/${provider}?login_hint=${getLoginHint()}`,
+          { headers }
+        ).then(function (res) {
           return res.json();
         });
       }
@@ -235,55 +282,52 @@
         });
       }
 
-      document.addEventListener("DOMContentLoaded", function() {
-        getCalendar().then(data => {
-          console.log({data});
+      document.addEventListener("DOMContentLoaded", function () {
+        getCalendar().then((data) => {
+          console.log({ data });
           renderCalendar(data);
-        })
+        });
       });
 
-      document
-        .getElementById("connectable")
-        .addEventListener("click", function () {
-          getConnectableCalendars().then(function (data) {
-            connectable_entries = data.entries;
-            renderConnectableEntries(data.entries);
-            if(data.entries.length > 0) {
-              enable('connect');
-            } else {
-              disable('connect');
-            }
-            console.log("Connectable entries", data);
-          });
+      addEventListener("click", "#connectable", function () {
+        getConnectableCalendars().then(function (data) {
+          connectable_entries = data.entries;
+          renderConnectableEntries(data.entries);
+          if (data.entries.length > 0) {
+            enable("connect");
+          } else {
+            disable("connect");
+          }
+          console.log("Connectable entries", data);
         });
+      });
 
-      document.getElementById("connect").addEventListener("click", function () {
+      addEventListener("click", "#connect", function () {
         connectCalendar(connectable_entries[0].identifier).then(function (
           data
         ) {
           console.log("Connect results", data);
           renderCalendar(data);
-          if(data.connected) {
-            enable('disconnect');
+          if (data.connected) {
+            disable("connect");
+            enable("disconnect");
           } else {
-            disable('disconnect');
+            disable("disconnect");
           }
         });
       });
 
-      document
-        .getElementById("disconnect")
-        .addEventListener("click", function () {
-          disconnectCalendar().then(function (data) {
-            console.log("Disconnect results", data);
-            renderCalendar(data);
-            if(!data.connected) {
-              disable('connect');
-              disable('connectable');
-              renderConnectableEntries([]);
-            }
-          });
+      addEventListener("click", "#disconnect", function () {
+        disconnectCalendar().then(function (data) {
+          console.log("Disconnect results", data);
+          renderCalendar(data);
+          if (!data.connected) {
+            disable("connect");
+            disable("connectable");
+            renderConnectableEntries([]);
+          }
         });
+      });
     </script>
   </body>
 </html>
