@@ -95,7 +95,7 @@
         return encodeURIComponent(document.getElementById("login_hint").value);
       }
 
-      function addEventListener(eventName, selector, handler) {
+      function setEventListener(eventName, selector, handler) {
         document.addEventListener(eventName, function (event) {
           const target = event.target;
 
@@ -106,11 +106,11 @@
       }
 
       function disable(id) {
-        document.getElementById(id).disabled = true;
+        (document.getElementById(id) || {}).disabled = true;
       }
 
       function enable(id) {
-        document.getElementById(id).disabled = false;
+        (document.getElementById(id) || {}).disabled = false;
       }
 
       function shortenString(str, maxLength = 16) {
@@ -173,7 +173,7 @@
 
         if (entries.length === 0) {
           container.innerHTML = `
-            <h2>Connectable Entries</h2>
+            <h2>Connectable Calendars</h2>
             <p>No entries loaded.</p>
           `;
           return;
@@ -214,7 +214,7 @@
       let connectable_entries = [];
       renderConnectableEntries(connectable_entries);
 
-      addEventListener("click", "#google", function () {
+      setEventListener("click", "#google", function () {
         getOAuthUrl("google")
           .then(({ url }) => {
             if (url) {
@@ -228,7 +228,7 @@
           });
       });
 
-      addEventListener("click", "#microsoft", function () {
+      setEventListener("click", "#microsoft", function () {
         getOAuthUrl("microsoft")
           .then(({ url }) => popout(url))
           .then(function (msg) {
@@ -289,7 +289,7 @@
         });
       });
 
-      addEventListener("click", "#connectable", function () {
+      setEventListener("click", "#connectable", function () {
         getConnectableCalendars().then(function (data) {
           connectable_entries = data.entries;
           renderConnectableEntries(data.entries);
@@ -302,7 +302,7 @@
         });
       });
 
-      addEventListener("click", "#connect", function () {
+      setEventListener("click", "#connect", function () {
         connectCalendar(connectable_entries[0].identifier).then(function (
           data
         ) {
@@ -317,7 +317,7 @@
         });
       });
 
-      addEventListener("click", "#disconnect", function () {
+      setEventListener("click", "#disconnect", function () {
         disconnectCalendar().then(function (data) {
           console.log("Disconnect results", data);
           renderCalendar(data);
