@@ -4,29 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Teamable Demo with Vue 3</title>
-    <link rel="stylesheet" href="https://unpkg.com/boltcss/bolt.min.css" />
-    <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
-    <style>
-      main {
-        padding: 2rem;
-      }
-      .status {
-        border: 1px solid gray;
-        padding: 0.5rem;
-        border-radius: 4px;
-        list-style: none;
-      }
-
-      .status + .status {
-        margin-top: 1rem;
-      }
-
-      .availability-item fieldset {
-        display: flex;
-        gap: 0.5rem;
-      }
-    </style>
   </head>
   <body>
     <div id="app">
@@ -34,9 +13,14 @@
         <div v-if="calendar" class="calendar">
           <h2>Calendar</h2>
           <div>
-            <p class="status"><strong>Status:</strong> {{ calendarStatus }}</p>
+            <p class="status" :class="statusClass">
+              <strong>Status:</strong> {{ calendarStatusText }}
+            </p>
             <p><strong>Connected:</strong> {{ calendar.connected }}</p>
-            <p><strong>Identifier:</strong> {{ shortenString(calendar.identifier) }}</p>
+            <p>
+              <strong>Identifier:</strong> {{ shortenString(calendar.identifier)
+              }}
+            </p>
             <p><strong>Label:</strong> {{ calendar.label }}</p>
             <p><strong>Type:</strong> {{ calendar.type }}</p>
           </div>
@@ -44,21 +28,52 @@
 
         <div>
           <label for="login_hint">Login Hint</label>
-          <input type="text" id="login_hint" v-model="loginHint" />
+          <input
+            type="text"
+            id="login_hint"
+            v-model="loginHint"
+            class="w-full max-w-96"
+          />
         </div>
 
-        <div>
-          <button type="button" @click="linkCalendar('google')">
+        <div class="mt-4 flex gap-2">
+          <button
+            type="button"
+            @click="linkCalendar('google')"
+            :disabled="oauthLinked"
+          >
             Link calendar with Google
           </button>
-          <button type="button" @click="linkCalendar('microsoft')">
+          <button
+            type="button"
+            @click="linkCalendar('microsoft')"
+            :disabled="oauthLinked"
+          >
             Link calendar with Microsoft
+          </button>
+          <button
+            type="button"
+            @click="disconnectCalendar"
+            :disabled="!calendarConnected"
+            title="Require OAuth linked"
+          >
+            Disconnect
           </button>
         </div>
         <br />
 
-        <div id="connectable_entries">
+        <div id="connectable_entries" v-if="oauthLinked && !calendarConnected">
           <h2>Connectable Entries</h2>
+          <div class="mt-4 flex gap-2">
+            <button
+              type="button"
+              @click="listConnectableCalendars"
+              :disabled="!oauthLinked"
+              title="Require OAuth linked"
+            >
+              List Connectable Calendars
+            </button>
+          </div>
           <ul>
             <li
               v-for="(entry, index) in connectableEntries"
@@ -69,10 +84,9 @@
               <strong>Primary:</strong> {{ entry.primary }} <br />
               <strong>Identifier:</strong> {{ shortenString(entry.identifier) }}
               <button
-                v-if="index === 0"
                 type="button"
                 @click="connectCalendar(entry.identifier)"
-                :disabled="!oauthLinked"
+                :disabled="!oauthLinked || calendarConnected"
                 title="Require OAuth linked"
               >
                 Connect
@@ -81,34 +95,89 @@
           </ul>
         </div>
 
-        <div>
-          <button
-            type="button"
-            @click="listConnectableCalendars"
-            :disabled="!oauthLinked"
-            title="Require OAuth linked"
-          >
-            List Connectable Calendars
-          </button>
-          <button
-            type="button"
-            @click="disconnectCalendar"
-            :disabled="!calendarConnected"
-            title="Require OAuth linked"
-          >
-            Disconnect
-          </button>
-          <button
-            type="button"
-            @click="getCalendarSettings"
-            :disabled="!calendarConnected"
-            title="Require OAuth linked"
-          >
-            Get settings
-          </button>
-        </div>
+        <div class="calendar-settings" v-if="calendarConnected">
+          <h2>Calendar Settings</h2>
 
-        <div id="calendar_settings" class="json-container"></div>
+          <div class="mt-4 flex gap-2">
+            <button
+              type="button"
+              @click="getCalendarSettings"
+              :disabled="!calendarConnected"
+              title="Require OAuth linked"
+            >
+              Get settings
+            </button>
+          </div>
+          <form
+            @submit.prevent="updateSettings"
+            v-if="settings.availabilities.length && calendarConnected"
+          >
+            <label>
+              <strong>Buffer:</strong>
+              <input type="number" v-model="settings.buffer" /> </label
+            ><br />
+            <label>
+              <strong>Time Zone:</strong>
+              <input type="text" v-model="settings.time_zone" /> </label
+            ><br />
+            <label>
+              <strong>Allow Same Day:</strong>
+              <input
+                type="checkbox"
+                v-model="settings.allow_same_day"
+              /> </label
+            ><br />
+            <label>
+              <strong>Max Days Ahead:</strong>
+              <input type="number" v-model="settings.max_days_ahead" /> </label
+            ><br />
+            <label>
+              <strong>Minimum Notice:</strong>
+              <input type="number" v-model="settings.minimum_notice" /> </label
+            ><br />
+            <div
+              v-for="(availability, index) in settings.availabilities"
+              :key="index"
+            >
+              <fieldset class="flex gap-2">
+                <legend>Availability {{ index + 1 }}</legend>
+                <label>
+                  <strong>Type:</strong>
+                  <input type="text" v-model="availability.type" /> </label
+                ><br />
+                <label>
+                  <strong>Start Hour:</strong>
+                  <input
+                    type="number"
+                    v-model="availability.start_hour"
+                  /> </label
+                ><br />
+                <label>
+                  <strong>Start Minute:</strong>
+                  <input
+                    type="number"
+                    v-model="availability.start_minute"
+                  /> </label
+                ><br />
+                <label>
+                  <strong>End Hour:</strong>
+                  <input
+                    type="number"
+                    v-model="availability.end_hour"
+                  /> </label
+                ><br />
+                <label>
+                  <strong>End Minute:</strong>
+                  <input type="number" v-model="availability.end_minute" />
+                </label>
+              </fieldset>
+            </div>
+            <button type="button" @click.prevent="addAvailability">
+              Add Availability</button
+            ><br /><br />
+            <button type="submit">Update Settings</button>
+          </form>
+        </div>
       </main>
     </div>
 
@@ -119,15 +188,42 @@
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRhbkBodW1hbmx5LmlvIiwiZXhwIjoyMzE5MjkwODA2LCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.mL-s5WFQrgdX-2uuGfIFvXpSNC5LC97XGP3IXtcOGog";
       const API_HOST = "https://tan-api.internal.humanly.dev";
 
+      const CalendarStatus = {
+        GOOGLE_OAUTH_NOT_CONNECTED: "GOOGLE_OAUTH_NOT_CONNECTED",
+        MICROSOFT_OAUTH_NOT_CONNECTED: "MICROSOFT_OAUTH_NOT_CONNECTED",
+        NO_OAUTH_LINKED: "NO_OAUTH_LINKED",
+        GOOGLE_CALENDAR_CONNECTED: "GOOGLE_CALENDAR_CONNECTED",
+        MICROSOFT_CALENDAR_CONNECTED: "MICROSOFT_CALENDAR_CONNECTED",
+        NO_CALENDAR: "NO_CALENDAR",
+      };
+
+      const calendarStatusText = {
+        [CalendarStatus.GOOGLE_OAUTH_NOT_CONNECTED]:
+          "⚠️ Google OAuth linked, not connected",
+        [CalendarStatus.MICROSOFT_OAUTH_NOT_CONNECTED]:
+          "⚠️ Microsoft OAuth linked, not connected",
+        [CalendarStatus.NO_OAUTH_LINKED]: "❌ No OAuth linked",
+        [CalendarStatus.GOOGLE_CALENDAR_CONNECTED]:
+          "✅ Google calendar connected",
+        [CalendarStatus.MICROSOFT_CALENDAR_CONNECTED]:
+          "✅ Microsoft calendar connected",
+        [CalendarStatus.NO_CALENDAR]: "",
+      };
+
       createApp({
         data() {
           return {
             loginHint: "tan@humanly.io",
             connectableEntries: [],
-            oauthLinked: false,
             calendar: null,
-            calendarConnected: false,
-            settings: {},
+            settings: {
+              buffer: 0,
+              time_zone: "",
+              allow_same_day: false,
+              max_days_ahead: 0,
+              minimum_notice: 0,
+              availabilities: [],
+            },
           };
         },
         methods: {
@@ -144,16 +240,6 @@
               const popup = window.open(url, null, "width=500,height=700");
               window.addEventListener("message", (msg) => {
                 popup.close();
-                if (
-                  msg &&
-                  msg.data &&
-                  msg.data.payload &&
-                  msg.data.payload.connected
-                ) {
-                  this.oauthLinked = true;
-                } else {
-                  this.oauthLinked = false;
-                }
                 this.getCalendar();
                 resolve(msg.data);
               });
@@ -184,38 +270,27 @@
             });
             const data = await response.json();
             this.connectableEntries = data.entries;
-            if (data.entries.length > 0) {
-              this.oauthLinked = true;
-            } else {
-              this.oauthLinked = false;
-            }
           },
           async getCalendarSettings() {
             const response = await fetch(`${API_HOST}/calendar/settings/`, {
               headers: this.headers,
             });
             this.settings = await response.json();
-            this.renderCalendarSettings(this.settings);
           },
           async connectCalendar(identifier) {
             const response = await fetch(`${API_HOST}/calendar/${identifier}`, {
               headers: this.headers,
               method: "POST",
             });
-            const data = await response.json();
-            this.renderCalendar(data);
-            this.calendarConnected = data.connected;
+            this.calendar = await response.json();
           },
           async disconnectCalendar() {
             const response = await fetch(`${API_HOST}/calendar`, {
               headers: this.headers,
               method: "DELETE",
             });
-            const data = await response.json();
-            this.renderCalendar(data);
-            if (!data.connected) {
-              this.calendarConnected = false;
-              this.oauthLinked = false;
+            this.calendar = await response.json();
+            if (!this.calendar.connected) {
               this.connectableEntries = [];
             }
           },
@@ -226,143 +301,22 @@
               return str;
             }
           },
-          renderCalendar(calendar) {
-            this.calendar = calendar;
-            this.calendarConnected = calendar.connected;
-            this.oauthLinked = !!calendar.type;
-          },
-          renderCalendarSettings(settings) {
-            const availabilitiesList = settings.availabilities
-              .map(
-                (availability, index) => `
-              <div class="availability-item">
-                  <fieldset>
-                      <legend>Availability ${index + 1}</legend>
-                      <label>
-                          <strong>Type:</strong>
-                          <input type="text" name="availabilities[${index}][type]" value="${
-                  availability.type
-                }">
-                      </label><br>
-                      <label>
-                          <strong>Start Hour:</strong>
-                          <input type="number" name="availabilities[${index}][start_hour]" value="${
-                  availability.start_hour
-                }">
-                      </label><br>
-                      <label>
-                          <strong>Start Minute:</strong>
-                          <input type="number" name="availabilities[${index}][start_minute]" value="${
-                  availability.start_minute
-                }">
-                      </label><br>
-                      <label>
-                          <strong>End Hour:</strong>
-                          <input type="number" name="availabilities[${index}][end_hour]" value="${
-                  availability.end_hour
-                }">
-                      </label><br>
-                      <label>
-                          <strong>End Minute:</strong>
-                          <input type="number" name="availabilities[${index}][end_minute]" value="${
-                  availability.end_minute
-                }">
-                      </label>
-                  </fieldset>
-              </div>
-          `
-              )
-              .join("");
-
-            document.getElementById("calendar_settings").innerHTML = `
-              <h2>Calendar Settings</h2>
-              <form id="settings_form">
-                  <label>
-                      <strong>Buffer:</strong>
-                      <input type="number" name="buffer" value="${
-                        settings.buffer
-                      }">
-                  </label><br>
-                  <label>
-                      <strong>Time Zone:</strong>
-                      <input type="text" name="time_zone" value="${
-                        settings.time_zone
-                      }">
-                  </label><br>
-                  <label>
-                      <strong>Allow Same Day:</strong>
-                      <input type="checkbox" name="allow_same_day" ${
-                        settings.allow_same_day ? "checked" : ""
-                      }>
-                  </label><br>
-                  <label>
-                      <strong>Max Days Ahead:</strong>
-                      <input type="number" name="max_days_ahead" value="${
-                        settings.max_days_ahead
-                      }">
-                  </label><br>
-                  <label>
-                      <strong>Minimum Notice:</strong>
-                      <input type="number" name="minimum_notice" value="${
-                        settings.minimum_notice
-                      }">
-                  </label><br>
-                  <label>
-                      <strong>Availabilities:</strong>
-                      <div class="availabilities-container" id="availabilities_container">
-                          ${availabilitiesList}
-                      </div>
-                  </label><br>
-                  <button type="button" @click.prevent="addAvailability">Add Availability</button><br><br>
-                  <button type="submit">Update Settings</button>
-              </form>
-          `;
-
-            document
-              .getElementById("settings_form")
-              .addEventListener("submit", async (event) => {
-                event.preventDefault();
-                const formData = new FormData(event.target);
-                const updatedSettings = {};
-                formData.forEach((value, key) => {
-                  const keys = key.split("[").map((k) => k.replace("]", ""));
-                  if (keys.length > 1) {
-                    if (!updatedSettings[keys[0]]) {
-                      updatedSettings[keys[0]] = [];
-                    }
-                    const index = parseInt(keys[1]);
-                    if (!updatedSettings[keys[0]][index]) {
-                      updatedSettings[keys[0]][index] = {};
-                    }
-                    updatedSettings[keys[0]][index][keys[2]] = value;
-                  } else {
-                    updatedSettings[key] = value;
-                  }
-                });
-                updatedSettings.allow_same_day =
-                  formData.get("allow_same_day") !== null;
-                await this.updateSettings(updatedSettings);
-                this.settings = updatedSettings;
-                this.renderCalendarSettings(this.settings);
-              });
+          async updateSettings() {
+            const response = await fetch(`${API_HOST}/calendar/settings`, {
+              headers: this.headers,
+              method: "PUT",
+              body: JSON.stringify(this.settings),
+            });
+            this.settings = await response.json();
           },
           addAvailability() {
             this.settings.availabilities.push({
               type: "",
-              end_hour: 0,
-              end_minute: 0,
               start_hour: 0,
               start_minute: 0,
+              end_hour: 0,
+              end_minute: 0,
             });
-            this.renderCalendarSettings(this.settings);
-          },
-          async updateSettings(settings) {
-            const response = await fetch(`${API_HOST}/calendar/settings`, {
-              headers: this.headers,
-              method: "PUT",
-              body: JSON.stringify(settings),
-            });
-            return response.json();
           },
         },
         computed: {
@@ -372,27 +326,76 @@
               Authorization: `Bearer ${token}`, // replace with your token
             });
           },
+          oauthLinked() {
+            return this.calendar && this.calendar.type;
+          },
+          calendarConnected() {
+            return this.calendar && this.calendar.connected;
+          },
           calendarStatus() {
             if (this.calendar) {
               if (this.calendar.type === "google" && !this.calendar.connected) {
-                return "Google OAuth linked, not connected";
-              } else if (this.calendar.type === "microsoft" && !this.calendar.connected) {
-                return "Microsoft OAuth linked, not connected";
+                return CalendarStatus.GOOGLE_OAUTH_NOT_CONNECTED;
+              } else if (
+                this.calendar.type === "microsoft" &&
+                !this.calendar.connected
+              ) {
+                return CalendarStatus.MICROSOFT_OAUTH_NOT_CONNECTED;
               } else if (this.calendar.type === null) {
-                return "No OAuth linked";
-              } else if (this.calendar.type === "google" && this.calendar.connected) {
-                return "Google calendar connected";
-              } else if (this.calendar.type === "microsoft" && this.calendar.connected) {
-                return "Microsoft calendar connected";
+                return CalendarStatus.NO_OAUTH_LINKED;
+              } else if (
+                this.calendar.type === "google" &&
+                this.calendar.connected
+              ) {
+                return CalendarStatus.GOOGLE_CALENDAR_CONNECTED;
+              } else if (
+                this.calendar.type === "microsoft" &&
+                this.calendar.connected
+              ) {
+                return CalendarStatus.MICROSOFT_CALENDAR_CONNECTED;
               }
             }
-            return "";
-          }
+            return CalendarStatus.NO_CALENDAR;
+          },
+          calendarStatusText() {
+            return calendarStatusText[this.calendarStatus];
+          },
+          statusClass() {
+            const statusClass = {
+              GOOGLE_OAUTH_NOT_CONNECTED: "bg-yellow-100",
+              MICROSOFT_OAUTH_NOT_CONNECTED: "bg-yellow-100",
+              NO_OAUTH_LINKED: "bg-red-100",
+              GOOGLE_CALENDAR_CONNECTED: "bg-green-100",
+              MICROSOFT_CALENDAR_CONNECTED: "bg-green-100",
+              NO_CALENDAR: "",
+            };
+            return statusClass[this.calendarStatus];
+          },
         },
         mounted() {
           this.getCalendar();
         },
       }).mount("#app");
     </script>
+    <link rel="stylesheet" href="https://unpkg.com/boltcss/bolt.min.css" />
+    <style>
+      main {
+        padding: 2rem;
+      }
+      .status {
+        border: 1px solid gray;
+        padding: 0.5rem;
+        border-radius: 4px;
+        list-style: none;
+      }
+
+      .status + .status {
+        margin-top: 1rem;
+      }
+
+      label strong + input {
+        margin-left: 0.5rem !important;
+      }
+    </style>
   </body>
 </html>
