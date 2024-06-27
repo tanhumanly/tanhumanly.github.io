@@ -14,7 +14,7 @@
           <h2>Calendar</h2>
           <button
             type="button"
-            class="bg-red-500 text-white"
+            class="bg-red-500"
             @click="disconnectCalendar"
             title="Require calendar connected"
           >
@@ -35,14 +35,14 @@
 
           <div class="mt-4 flex gap-2">
             <button
-              class="bg-blue-500 text-white"
+              class="bg-blue-500"
               type="button"
               @click="linkCalendar('google')"
             >
               Link Google Calendar
             </button>
             <button
-              class="bg-red-500 text-white"
+              class="bg-red-500"
               type="button"
               @click="linkCalendar('microsoft')"
             >
@@ -60,11 +60,11 @@
             <li
               v-for="(entry, index) in connectableEntries"
               :key="entry.identifier"
-              class="mt-4 bg-gray-100 p-4 rounded-md"
+              class="mt-4 p-4 rounded-md border-solid border-sky-500 border-2"
             >
               <button
                 type="button"
-                class="bg-teal-500 mr-4 text-white"
+                class="bg-teal-500 mr-4"
                 @click="connectCalendar(entry.identifier)"
                 :disabled="!oauthLinked || calendarConnected"
                 title="Require OAuth linked"
@@ -151,7 +151,7 @@
               <button type="button" @click.prevent="addAvailability">
                 Add Availability
               </button>
-              <button type="submit" class="bg-teal-500 text-white">
+              <button type="submit" class="bg-teal-500">
                 Update Settings
               </button>
             </div>
@@ -160,7 +160,7 @@
       </main>
 
       <main v-if="!dataLoaded">
-        <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center bg-white z-50">
+        <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center z-50">
           <div class="flex items-center space-x-2">
             <div class="w-8 h-8 border-4 border-blue-500 border-dotted rounded-full animate-spin"></div>
             <div class="text-blue-500 text-xl font-semibold">Cooking fast...</div>
@@ -172,9 +172,12 @@
     <script>
       const { createApp } = Vue;
 
-      const token =
-        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRhbkBodW1hbmx5LmlvIiwiZXhwIjoyMzE5MjkwODA2LCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.mL-s5WFQrgdX-2uuGfIFvXpSNC5LC97XGP3IXtcOGog";
-      const API_HOST = "https://tan-api.internal.humanly.dev";
+      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RzK2FwcEBodW1hbmx5LmlvIiwiZXhwIjoyMzE4MDc2MDAzLCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.Ms0F8w_fpH_c0QKee2bm5YIW0lKV2-zrY9LNAOvxbp8";
+      const API_HOST = "https://local.api.internal.humanly.io:4004";
+
+      // const token =
+      //   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRhbkBodW1hbmx5LmlvIiwiZXhwIjoyMzE5MjkwODA2LCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.mL-s5WFQrgdX-2uuGfIFvXpSNC5LC97XGP3IXtcOGog";
+      // const API_HOST = "https://tan-api.internal.humanly.dev";
 
       const CalendarStatus = {
         GOOGLE_OAUTH_NOT_CONNECTED: "GOOGLE_OAUTH_NOT_CONNECTED",
