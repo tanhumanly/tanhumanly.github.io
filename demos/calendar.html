@@ -9,56 +9,52 @@
   </head>
   <body>
     <div id="app">
-      <main class="max-w-7xl p-4">
-        <div v-if="calendar" class="calendar">
+      <main class="max-w-7xl p-4" v-if="dataLoaded">
+        <div v-if="calendarConnected">
           <h2>Calendar</h2>
-          <div>
-            <p class="p-4 rounded-md" :class="statusClass">
-              <strong
-                >{{ calendarStatusText }} {{ calendar.label }}
-                <button
-                  type="button"
-                  class="bg-rose-500"
-                  @click="disconnectCalendar"
-                  v-show="calendarConnected"
-                  title="Require calendar connected"
-                >
-                  Disconnect
-                </button></strong
-              >
-            </p>
-          </div>
+          <button
+            type="button"
+            class="bg-red-500 text-white"
+            @click="disconnectCalendar"
+            title="Require calendar connected"
+          >
+            Disconnect from {{ calendar.label }}
+          </button>
         </div>
 
-        <div v-show="!oauthLinked">
+        <div v-if="!calendarConnected && connectableEntries.length < 1">
+          <h2>Calendar</h2>
           <label for="login_hint"
-            ><strong>Login Hint</strong>
+            ><strong>Email (if known)</strong>
             <input
               type="text"
               id="login_hint"
               v-model="loginHint"
               class="w-full max-w-96"
           /></label>
+
+          <div class="mt-4 flex gap-2">
+            <button
+              class="bg-blue-500 text-white"
+              type="button"
+              @click="linkCalendar('google')"
+            >
+              Link Google Calendar
+            </button>
+            <button
+              class="bg-red-500 text-white"
+              type="button"
+              @click="linkCalendar('microsoft')"
+            >
+              Link Microsoft Calendar
+            </button>
+          </div>
         </div>
 
-        <div v-show="!oauthLinked" class="mt-4 flex gap-2">
-          <button
-            type="button"
-            @click="linkCalendar('google')"
-            :disabled="oauthLinked"
-          >
-            Link calendar with Google
-          </button>
-          <button
-            type="button"
-            @click="linkCalendar('microsoft')"
-            :disabled="oauthLinked"
-          >
-            Link calendar with Microsoft
-          </button>
-        </div>
-
-        <div id="connectable_entries" v-if="oauthLinked && !calendarConnected">
+        <div
+          id="connectable_entries"
+          v-if="oauthLinked && !calendarConnected && connectableEntries.length > 1"
+        >
           <h2>Select a calendar to connect</h2>
           <ul>
             <li
@@ -68,7 +64,7 @@
             >
               <button
                 type="button"
-                class="bg-teal-500 mr-4"
+                class="bg-teal-500 mr-4 text-white"
                 @click="connectCalendar(entry.identifier)"
                 :disabled="!oauthLinked || calendarConnected"
                 title="Require OAuth linked"
@@ -88,7 +84,7 @@
         </div>
 
         <div class="calendar-settings" v-if="calendarConnected">
-          <h2>Calendar Settings</h2>
+          <h2>Settings</h2>
 
           <form
             @submit.prevent="updateSettings"
@@ -155,9 +151,20 @@
               <button type="button" @click.prevent="addAvailability">
                 Add Availability
               </button>
-              <button type="submit" class="bg-teal-500">Update Settings</button>
+              <button type="submit" class="bg-teal-500 text-white">
+                Update Settings
+              </button>
             </div>
           </form>
+        </div>
+      </main>
+
+      <main v-if="!dataLoaded">
+        <div id="loading-indicator" class="fixed inset-0 flex items-center justify-center bg-white z-50">
+          <div class="flex items-center space-x-2">
+            <div class="w-8 h-8 border-4 border-blue-500 border-dotted rounded-full animate-spin"></div>
+            <div class="text-blue-500 text-xl font-semibold">Cooking fast...</div>
+          </div>
         </div>
       </main>
     </div>
@@ -180,20 +187,21 @@
 
       const calendarStatusText = {
         [CalendarStatus.GOOGLE_OAUTH_NOT_CONNECTED]:
-          "⚠️ Google OAuth linked, not connected",
+          "Google OAuth linked, not connected",
         [CalendarStatus.MICROSOFT_OAUTH_NOT_CONNECTED]:
-          "⚠️ Microsoft OAuth linked, not connected",
-        [CalendarStatus.NO_OAUTH_LINKED]: "❌ No OAuth linked",
+          "Microsoft OAuth linked, not connected",
+        [CalendarStatus.NO_OAUTH_LINKED]: "No OAuth linked",
         [CalendarStatus.GOOGLE_CALENDAR_CONNECTED]:
-          "✅ Google calendar connected to ",
+          "Google calendar connected to ",
         [CalendarStatus.MICROSOFT_CALENDAR_CONNECTED]:
-          "✅ Microsoft calendar connected to ",
+          "Microsoft calendar connected to ",
         [CalendarStatus.NO_CALENDAR]: "",
       };
 
       createApp({
         data() {
           return {
+            dataLoaded: false,
             loginHint: "tan@humanly.io",
             connectableEntries: [],
             calendar: null,
@@ -217,15 +225,18 @@
             }
           },
           async popout(url) {
+            this.dataLoaded = false;
             return new Promise((resolve, reject) => {
               const popup = window.open(url, null, "width=500,height=700");
               window.addEventListener("message", (msg) => {
                 popup.close();
                 this.getCalendar();
+                this.dataLoaded = true;
                 resolve(msg.data);
               });
               setTimeout(() => {
                 popup.close();
+                this.dataLoaded = true;
                 reject("Timeout");
               }, 150000);
             });
@@ -240,13 +251,15 @@
             return response.json();
           },
           async getCalendar() {
+            this.dataLoaded = false;
+
             const response = await fetch(`${API_HOST}/calendar/`, {
               headers: this.headers,
             });
             this.calendar = await response.json();
 
             if (this.calendar.connected) {
-              this.getCalendarSettings();
+              await this.getCalendarSettings();
             }
 
             if (
@@ -255,8 +268,9 @@
               this.calendarStatus ===
                 CalendarStatus.MICROSOFT_OAUTH_NOT_CONNECTED
             ) {
-              this.listConnectableCalendars();
+              await this.listConnectableCalendars();
             }
+            this.dataLoaded = true;
           },
           async listConnectableCalendars() {
             const response = await fetch(`${API_HOST}/calendar/connectable/`, {
@@ -264,6 +278,10 @@
             });
             const data = await response.json();
             this.connectableEntries = data.entries;
+
+            if (this.connectableEntries.length === 1) {
+              await this.connectCalendar(this.connectableEntries[0].identifier);
+            }
           },
           async getCalendarSettings() {
             const response = await fetch(`${API_HOST}/calendar/settings/`, {
@@ -278,7 +296,7 @@
             });
             this.calendar = await response.json();
             if (this.calendar.connected) {
-              this.getCalendarSettings();
+              await this.getCalendarSettings();
             }
           },
           async disconnectCalendar() {
@@ -287,6 +305,7 @@
               method: "DELETE",
             });
             this.calendar = await response.json();
+            this.connectableEntries = [];
           },
           shortenString(str, maxLength = 16) {
             if (str && str.length > maxLength) {
@@ -296,12 +315,16 @@
             }
           },
           async updateSettings() {
+            this.dataLoaded = false;
+
             const response = await fetch(`${API_HOST}/calendar/settings`, {
               headers: this.headers,
               method: "PUT",
               body: JSON.stringify(this.settings),
             });
+            
             this.settings = await response.json();
+            this.dataLoaded = true;
           },
           addAvailability() {
             this.settings.availabilities.push({
