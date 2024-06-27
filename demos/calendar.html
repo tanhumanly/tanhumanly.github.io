@@ -58,7 +58,18 @@
         >
           Disconnect
         </button>
+
+        <button
+          type="button"
+          id="settings"
+          disabled
+          title="Require OAuth linked"
+        >
+          Get settings
+        </button>
       </div>
+
+      <div id="calendar_settings" class="json-container"></div>
     </main>
 
     <script>
@@ -150,8 +161,10 @@
 
         if (calendar.connected) {
           enable("disconnect");
+          enable("settings");
         } else {
           disable("disconnect");
+          disable("settings");
         }
 
         document.getElementById("calendar").innerHTML = `
@@ -204,6 +217,35 @@
         `;
       }
 
+      function renderCalendarSettings(settings) {
+        const container = document.getElementById("calendar_settings");
+
+        const availabilitiesList = settings.availabilities.map(availability => `
+            <li>
+                <strong>Type:</strong> ${availability.type} <br>
+                <strong>Start Time:</strong> ${availability.start_hour}:${availability.start_minute.toString().padStart(2, '0')} <br>
+                <strong>End Time:</strong> ${availability.end_hour}:${availability.end_minute.toString().padStart(2, '0')}
+            </li>
+        `).join("");
+
+        container.innerHTML = `
+            <h2>Calendar Settings</h2>
+            <ul>
+                <li><strong>Buffer:</strong> ${settings.buffer}</li>
+                <li><strong>Time Zone:</strong> ${settings.time_zone}</li>
+                <li><strong>Allow Same Day:</strong> ${settings.allow_same_day}</li>
+                <li><strong>Max Days Ahead:</strong> ${settings.max_days_ahead}</li>
+                <li><strong>Minimum Notice:</strong> ${settings.minimum_notice}</li>
+                <li><strong>Availabilities:</strong>
+                    <ul>
+                        ${availabilitiesList}
+                    </ul>
+                </li>
+            </ul>
+        `;
+      }
+
+
       const origin = encodeURIComponent(window.location.href);
       // const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RzK2FwcEBodW1hbmx5LmlvIiwiZXhwIjoyMzE4MDc2MDAzLCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.Ms0F8w_fpH_c0QKee2bm5YIW0lKV2-zrY9LNAOvxbp8";
       // const API_HOST = "https://local.api.internal.humanly.io:4004";
@@ -212,6 +254,7 @@
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRhbkBodW1hbmx5LmlvIiwiZXhwIjoyMzE5MjkwODA2LCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.mL-s5WFQrgdX-2uuGfIFvXpSNC5LC97XGP3IXtcOGog";
       const API_HOST = "https://tan-api.internal.humanly.dev";
       let connectable_entries = [];
+      let settings = {};
       renderConnectableEntries(connectable_entries);
 
       setEventListener("click", "#google", function () {
@@ -258,6 +301,14 @@
 
       async function getConnectableCalendars() {
         return fetch(`${API_HOST}/calendar/connectable/`, { headers }).then(
+          function (res) {
+            return res.json();
+          }
+        );
+      }
+
+      async function getSettings() {
+        return fetch(`${API_HOST}/calendar/settings/`, { headers }).then(
           function (res) {
             return res.json();
           }
@@ -311,8 +362,10 @@
           if (data.connected) {
             disable("connect");
             enable("disconnect");
+            enable("settings");
           } else {
             disable("disconnect");
+            disable("settings");
           }
         });
       });
@@ -326,6 +379,14 @@
             disable("connectable");
             renderConnectableEntries([]);
           }
+        });
+      });
+
+      setEventListener("click", "#settings", function () {
+        getSettings().then(function (data) {
+          console.log("Settings results", data);
+          settings = data;
+          renderCalendarSettings(settings);
         });
       });
     </script>
