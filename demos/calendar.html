@@ -31,7 +31,16 @@
   <body>
     <div id="app">
       <main>
-        <div id="calendar"></div>
+        <div v-if="calendar" class="calendar">
+          <h2>Calendar</h2>
+          <div>
+            <p class="status"><strong>Status:</strong> {{ calendarStatus }}</p>
+            <p><strong>Connected:</strong> {{ calendar.connected }}</p>
+            <p><strong>Identifier:</strong> {{ shortenString(calendar.identifier) }}</p>
+            <p><strong>Label:</strong> {{ calendar.label }}</p>
+            <p><strong>Type:</strong> {{ calendar.type }}</p>
+          </div>
+        </div>
 
         <div>
           <label for="login_hint">Login Hint</label>
@@ -116,6 +125,7 @@
             loginHint: "tan@humanly.io",
             connectableEntries: [],
             oauthLinked: false,
+            calendar: null,
             calendarConnected: false,
             settings: {},
           };
@@ -144,7 +154,7 @@
                 } else {
                   this.oauthLinked = false;
                 }
-                this.getCalendar().then(this.renderCalendar);
+                this.getCalendar();
                 resolve(msg.data);
               });
               setTimeout(() => {
@@ -166,7 +176,7 @@
             const response = await fetch(`${API_HOST}/calendar/`, {
               headers: this.headers,
             });
-            return response.json();
+            this.calendar = await response.json();
           },
           async listConnectableCalendars() {
             const response = await fetch(`${API_HOST}/calendar/connectable/`, {
@@ -210,39 +220,16 @@
             }
           },
           shortenString(str, maxLength = 16) {
-            if (str.length > maxLength) {
+            if (str && str.length > maxLength) {
               return str.substring(0, maxLength) + "...";
             } else {
               return str;
             }
           },
           renderCalendar(calendar) {
-            let status = "";
-            if (calendar.type === "google" && !calendar.connected) {
-              status = "Google OAuth linked, not connected";
-            } else if (calendar.type === "microsoft" && !calendar.connected) {
-              status = "Microsoft OAuth linked, not connected";
-            } else if (calendar.type === null) {
-              status = "No OAuth linked";
-            } else if (calendar.type === "google" && calendar.connected) {
-              status = "Google calendar connected";
-            } else if (calendar.type === "microsoft" && calendar.connected) {
-              status = "Microsoft calendar connected";
-            }
+            this.calendar = calendar;
             this.calendarConnected = calendar.connected;
             this.oauthLinked = !!calendar.type;
-            document.getElementById("calendar").innerHTML = `
-            <h2>Calendar</h2>
-            <div>
-              <p class="status"><strong>Status:</strong> ${status}</p>
-              <p><strong>Connected:</strong> ${calendar.connected}</p>
-              <p><strong>Identifier:</strong> ${this.shortenString(
-                calendar.identifier
-              )}</p>
-              <p><strong>Label:</strong> ${calendar.label}</p>
-              <p><strong>Type:</strong> ${calendar.type}</p>
-            </div>
-          `;
           },
           renderCalendarSettings(settings) {
             const availabilitiesList = settings.availabilities
@@ -385,9 +372,25 @@
               Authorization: `Bearer ${token}`, // replace with your token
             });
           },
+          calendarStatus() {
+            if (this.calendar) {
+              if (this.calendar.type === "google" && !this.calendar.connected) {
+                return "Google OAuth linked, not connected";
+              } else if (this.calendar.type === "microsoft" && !this.calendar.connected) {
+                return "Microsoft OAuth linked, not connected";
+              } else if (this.calendar.type === null) {
+                return "No OAuth linked";
+              } else if (this.calendar.type === "google" && this.calendar.connected) {
+                return "Google calendar connected";
+              } else if (this.calendar.type === "microsoft" && this.calendar.connected) {
+                return "Microsoft calendar connected";
+              }
+            }
+            return "";
+          }
         },
         mounted() {
-          this.getCalendar().then(this.renderCalendar);
+          this.getCalendar();
         },
       }).mount("#app");
     </script>
