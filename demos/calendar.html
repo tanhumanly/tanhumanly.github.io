@@ -3,9 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Teamable Demo</title>
+    <title>Teamable Demo with Vue 3</title>
     <link rel="stylesheet" href="https://unpkg.com/boltcss/bolt.min.css" />
     <link href="https://cdn.tailwindcss.com" rel="stylesheet" />
+    <script src="https://unpkg.com/vue@3/dist/vue.global.js"></script>
     <style>
       main {
         padding: 2rem;
@@ -28,484 +29,367 @@
     </style>
   </head>
   <body>
-    <main>
-      <div id="calendar"></div>
+    <div id="app">
+      <main>
+        <div id="calendar"></div>
 
-      <div>
-        <label for="login_hint">Login Hint</label>
-        <input type="text" id="login_hint" value="tan@humanly.io" />
-      </div>
+        <div>
+          <label for="login_hint">Login Hint</label>
+          <input type="text" id="login_hint" v-model="loginHint" />
+        </div>
 
-      <div>
-        <button type="button" id="google">Link calendar with Google</button>
-        <button type="button" id="microsoft">
-          Link calendar with Microsoft
-        </button>
-      </div>
-      <br />
+        <div>
+          <button type="button" @click="linkCalendar('google')">
+            Link calendar with Google
+          </button>
+          <button type="button" @click="linkCalendar('microsoft')">
+            Link calendar with Microsoft
+          </button>
+        </div>
+        <br />
 
-      <div id="connectable_entries"></div>
-
-      <div>
-        <button
-          type="button"
-          id="connectable"
-          disabled
-          title="Require OAuth linked"
-        >
-          List Connectable Calendars
-        </button>
-        <button
-          type="button"
-          id="disconnect"
-          disabled
-          title="Require OAuth linked"
-        >
-          Disconnect
-        </button>
-
-        <button
-          type="button"
-          id="settings"
-          disabled
-          title="Require OAuth linked"
-        >
-          Get settings
-        </button>
-      </div>
-
-      <div id="calendar_settings" class="json-container"></div>
-    </main>
-
-    <script>
-      const popout = async function (url) {
-        return new Promise((resolve, reject) => {
-          const popup = window.open(url, null, "width=500,height=700");
-          window.addEventListener("message", function (msg) {
-            popup.close();
-            console.log(msg);
-
-            if (
-              msg &&
-              msg.data &&
-              msg.data.payload &&
-              msg.data.payload.connected
-            ) {
-              enable("connectable");
-            } else {
-              disable("connectable");
-            }
-
-            getCalendar().then(renderCalendar);
-            resolve(msg.data);
-          });
-
-          setTimeout(function () {
-            popup.close();
-            reject("Timeout");
-          }, 150000);
-        });
-      };
-
-      function getLoginHint() {
-        return encodeURIComponent(document.getElementById("login_hint").value);
-      }
-
-      function setEventListener(eventName, selector, handler) {
-        document.addEventListener(eventName, function (event) {
-          const target = event.target;
-
-          if (target && target.matches(selector)) {
-            handler(event);
-          }
-        });
-      }
-
-      function disable(id) {
-        (document.getElementById(id) || {}).disabled = true;
-      }
-
-      function enable(id) {
-        (document.getElementById(id) || {}).disabled = false;
-      }
-
-      function shortenString(str, maxLength = 16) {
-        if (str.length > maxLength) {
-          return str.substring(0, maxLength) + "...";
-        } else {
-          return str;
-        }
-      }
-
-      function renderCalendar(calendar) {
-        let status = "";
-
-        if (calendar.type === "google" && calendar.connected === false) {
-          status = "Google OAuth linked, not connected";
-        } else if (
-          calendar.type === "microsoft" &&
-          calendar.connected === false
-        ) {
-          status = "Microsoft OAuth linked, not connected";
-        } else if (calendar.type === null) {
-          status = "No OAuth linked";
-        } else if (calendar.type === "google" && calendar.connected === true) {
-          status = "Google calendar connected";
-        } else if (
-          calendar.type === "microsoft" &&
-          calendar.connected === true
-        ) {
-          status = "Microsoft calendar connected";
-        }
-
-        if (calendar.type) {
-          enable("connectable");
-        } else {
-          disable("connectable");
-        }
-
-        if (calendar.connected) {
-          enable("disconnect");
-          enable("settings");
-        } else {
-          disable("disconnect");
-          disable("settings");
-        }
-
-        document.getElementById("calendar").innerHTML = `
-          <h2>Calendar</h2>
-          <div>
-            <p class="status"><strong>Status:</strong> ${status}</p>
-            <p><strong>Connected:</strong> ${calendar.connected}</p>
-            <p><strong>Identifier:</strong> ${
-              calendar.identifier && shortenString(calendar.identifier)
-            }</p>
-            <p><strong>Label:</strong> ${calendar.label}</p>
-            <p><strong>Type:</strong> ${calendar.type}</p>
-          </div>
-        `;
-      }
-
-      function renderConnectableEntries(entries) {
-        const container = document.getElementById("connectable_entries");
-
-        if (entries.length === 0) {
-          container.innerHTML = `
-            <h2>Connectable Calendars</h2>
-            <p>No entries loaded.</p>
-          `;
-          return;
-        }
-
-        const list = entries
-          .map(
-            (entry, index) => `
-          <li class="status">
-            <strong>Label:</strong> ${entry.label} <br>
-            <strong>Primary:</strong> ${entry.primary} <br>
-            <strong>Identifier:</strong> ${shortenString(entry.identifier)}
-            ${
-              index === 0
-                ? '<button type="button" id="connect" disabled title="Require OAuth linked">Connect</button>'
-                : ""
-            }
-          </li>
-        `
-          )
-          .join("");
-
-        container.innerHTML = `
+        <div id="connectable_entries">
           <h2>Connectable Entries</h2>
           <ul>
-            ${list}
+            <li
+              v-for="(entry, index) in connectableEntries"
+              :key="entry.identifier"
+              class="status"
+            >
+              <strong>Label:</strong> {{ entry.label }} <br />
+              <strong>Primary:</strong> {{ entry.primary }} <br />
+              <strong>Identifier:</strong> {{ shortenString(entry.identifier) }}
+              <button
+                v-if="index === 0"
+                type="button"
+                @click="connectCalendar(entry.identifier)"
+                :disabled="!oauthLinked"
+                title="Require OAuth linked"
+              >
+                Connect
+              </button>
+            </li>
           </ul>
-        `;
-      }
+        </div>
 
-      function renderCalendarSettings(settings) {
-        const container = document.getElementById("calendar_settings");
+        <div>
+          <button
+            type="button"
+            @click="listConnectableCalendars"
+            :disabled="!oauthLinked"
+            title="Require OAuth linked"
+          >
+            List Connectable Calendars
+          </button>
+          <button
+            type="button"
+            @click="disconnectCalendar"
+            :disabled="!calendarConnected"
+            title="Require OAuth linked"
+          >
+            Disconnect
+          </button>
+          <button
+            type="button"
+            @click="getCalendarSettings"
+            :disabled="!calendarConnected"
+            title="Require OAuth linked"
+          >
+            Get settings
+          </button>
+        </div>
 
-        const availabilitiesList = settings.availabilities
-          .map(
-            (availability, index) => `
-            <div class="availability-item">
-                <fieldset>
-                    <legend>Availability ${index + 1}</legend>
-                    <label>
-                        <strong>Type:</strong>
-                        <input type="text" name="availabilities[${index}][type]" value="${
-              availability.type
-            }">
-                    </label><br>
-                    <label>
-                        <strong>Start Hour:</strong>
-                        <input type="number" name="availabilities[${index}][start_hour]" value="${
-              availability.start_hour
-            }">
-                    </label><br>
-                    <label>
-                        <strong>Start Minute:</strong>
-                        <input type="number" name="availabilities[${index}][start_minute]" value="${
-              availability.start_minute
-            }">
-                    </label><br>
-                    <label>
-                        <strong>End Hour:</strong>
-                        <input type="number" name="availabilities[${index}][end_hour]" value="${
-              availability.end_hour
-            }">
-                    </label><br>
-                    <label>
-                        <strong>End Minute:</strong>
-                        <input type="number" name="availabilities[${index}][end_minute]" value="${
-              availability.end_minute
-            }">
-                    </label>
-                </fieldset>
-            </div>
-        `
-          )
-          .join("");
+        <div id="calendar_settings" class="json-container"></div>
+      </main>
+    </div>
 
-        container.innerHTML = `
-            <h2>Calendar Settings</h2>
-            <form id="settings_form">
-                <label>
-                    <strong>Buffer:</strong>
-                    <input type="number" name="buffer" value="${
-                      settings.buffer
-                    }">
-                </label><br>
-                <label>
-                    <strong>Time Zone:</strong>
-                    <input type="text" name="time_zone" value="${
-                      settings.time_zone
-                    }">
-                </label><br>
-                <label>
-                    <strong>Allow Same Day:</strong>
-                    <input type="checkbox" name="allow_same_day" ${
-                      settings.allow_same_day ? "checked" : ""
-                    }>
-                </label><br>
-                <label>
-                    <strong>Max Days Ahead:</strong>
-                    <input type="number" name="max_days_ahead" value="${
-                      settings.max_days_ahead
-                    }">
-                </label><br>
-                <label>
-                    <strong>Minimum Notice:</strong>
-                    <input type="number" name="minimum_notice" value="${
-                      settings.minimum_notice
-                    }">
-                </label><br>
-                <label>
-                    <strong>Availabilities:</strong>
-                    <div class="availabilities-container" id="availabilities_container">
-                        ${availabilitiesList}
-                    </div>
-                </label><br>
-                <button type="button" onclick="addAvailability()">Add Availability</button><br><br>
-                <button type="submit">Update Settings</button>
-            </form>
-        `;
-
-        setEventListener("submit", "#settings_form", async function (event) {
-          event.preventDefault();
-          const formData = new FormData(event.target);
-          const updatedSettings = {};
-          formData.forEach((value, key) => {
-            const keys = key.split("[").map((k) => k.replace("]", ""));
-            if (keys.length > 1) {
-              if (!updatedSettings[keys[0]]) {
-                updatedSettings[keys[0]] = [];
-              }
-              const index = parseInt(keys[1]);
-              if (!updatedSettings[keys[0]][index]) {
-                updatedSettings[keys[0]][index] = {};
-              }
-              updatedSettings[keys[0]][index][keys[2]] = value;
-            } else {
-              updatedSettings[key] = value;
-            }
-          });
-
-          updatedSettings.allow_same_day =
-            formData.get("allow_same_day") !== null;
-
-          await updateSettings(updatedSettings);
-          settings = updatedSettings; // Update the settings with the new values
-          renderCalendarSettings(settings); // Re-render the form with updated values
-        });
-      }
-
-      function addAvailability() {
-        settings.availabilities.push({
-          type: "",
-          end_hour: 0,
-          end_minute: 0,
-          start_hour: 0,
-          start_minute: 0,
-        });
-        renderCalendarSettings(settings);
-      }
-
-      const origin = encodeURIComponent(window.location.href);
-      // const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RzK2FwcEBodW1hbmx5LmlvIiwiZXhwIjoyMzE4MDc2MDAzLCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.Ms0F8w_fpH_c0QKee2bm5YIW0lKV2-zrY9LNAOvxbp8";
-      // const API_HOST = "https://local.api.internal.humanly.io:4004";
+    <script>
+      const { createApp } = Vue;
 
       const token =
         "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRhbkBodW1hbmx5LmlvIiwiZXhwIjoyMzE5MjkwODA2LCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.mL-s5WFQrgdX-2uuGfIFvXpSNC5LC97XGP3IXtcOGog";
       const API_HOST = "https://tan-api.internal.humanly.dev";
-      let connectable_entries = [];
-      let settings = {};
-      renderConnectableEntries(connectable_entries);
 
-      setEventListener("click", "#google", function () {
-        getOAuthUrl("google")
-          .then(({ url }) => {
+      createApp({
+        data() {
+          return {
+            loginHint: "tan@humanly.io",
+            connectableEntries: [],
+            oauthLinked: false,
+            calendarConnected: false,
+            settings: {},
+          };
+        },
+        methods: {
+          async linkCalendar(provider) {
+            const { url } = await this.getOAuthUrl(provider);
             if (url) {
-              popout(url);
+              this.popout(url);
             } else {
-              throw "url is not returned";
+              console.error("URL is not returned");
             }
-          })
-          .then(function (msg) {
-            console.log("Received pop up results", msg);
-          });
-      });
+          },
+          async popout(url) {
+            return new Promise((resolve, reject) => {
+              const popup = window.open(url, null, "width=500,height=700");
+              window.addEventListener("message", (msg) => {
+                popup.close();
+                if (
+                  msg &&
+                  msg.data &&
+                  msg.data.payload &&
+                  msg.data.payload.connected
+                ) {
+                  this.oauthLinked = true;
+                } else {
+                  this.oauthLinked = false;
+                }
+                this.getCalendar().then(this.renderCalendar);
+                resolve(msg.data);
+              });
+              setTimeout(() => {
+                popup.close();
+                reject("Timeout");
+              }, 150000);
+            });
+          },
+          async getOAuthUrl(provider) {
+            const response = await fetch(
+              `${API_HOST}/calendar/oauth/${provider}?login_hint=${encodeURIComponent(
+                this.loginHint
+              )}`,
+              { headers: this.headers }
+            );
+            return response.json();
+          },
+          async getCalendar() {
+            const response = await fetch(`${API_HOST}/calendar/`, {
+              headers: this.headers,
+            });
+            return response.json();
+          },
+          async listConnectableCalendars() {
+            const response = await fetch(`${API_HOST}/calendar/connectable/`, {
+              headers: this.headers,
+            });
+            const data = await response.json();
+            this.connectableEntries = data.entries;
+            if (data.entries.length > 0) {
+              this.oauthLinked = true;
+            } else {
+              this.oauthLinked = false;
+            }
+          },
+          async getCalendarSettings() {
+            const response = await fetch(`${API_HOST}/calendar/settings/`, {
+              headers: this.headers,
+            });
+            this.settings = await response.json();
+            this.renderCalendarSettings(this.settings);
+          },
+          async connectCalendar(identifier) {
+            const response = await fetch(`${API_HOST}/calendar/${identifier}`, {
+              headers: this.headers,
+              method: "POST",
+            });
+            const data = await response.json();
+            this.renderCalendar(data);
+            this.calendarConnected = data.connected;
+          },
+          async disconnectCalendar() {
+            const response = await fetch(`${API_HOST}/calendar`, {
+              headers: this.headers,
+              method: "DELETE",
+            });
+            const data = await response.json();
+            this.renderCalendar(data);
+            if (!data.connected) {
+              this.calendarConnected = false;
+              this.oauthLinked = false;
+              this.connectableEntries = [];
+            }
+          },
+          shortenString(str, maxLength = 16) {
+            if (str.length > maxLength) {
+              return str.substring(0, maxLength) + "...";
+            } else {
+              return str;
+            }
+          },
+          renderCalendar(calendar) {
+            let status = "";
+            if (calendar.type === "google" && !calendar.connected) {
+              status = "Google OAuth linked, not connected";
+            } else if (calendar.type === "microsoft" && !calendar.connected) {
+              status = "Microsoft OAuth linked, not connected";
+            } else if (calendar.type === null) {
+              status = "No OAuth linked";
+            } else if (calendar.type === "google" && calendar.connected) {
+              status = "Google calendar connected";
+            } else if (calendar.type === "microsoft" && calendar.connected) {
+              status = "Microsoft calendar connected";
+            }
+            this.calendarConnected = calendar.connected;
+            this.oauthLinked = !!calendar.type;
+            document.getElementById("calendar").innerHTML = `
+            <h2>Calendar</h2>
+            <div>
+              <p class="status"><strong>Status:</strong> ${status}</p>
+              <p><strong>Connected:</strong> ${calendar.connected}</p>
+              <p><strong>Identifier:</strong> ${this.shortenString(
+                calendar.identifier
+              )}</p>
+              <p><strong>Label:</strong> ${calendar.label}</p>
+              <p><strong>Type:</strong> ${calendar.type}</p>
+            </div>
+          `;
+          },
+          renderCalendarSettings(settings) {
+            const availabilitiesList = settings.availabilities
+              .map(
+                (availability, index) => `
+              <div class="availability-item">
+                  <fieldset>
+                      <legend>Availability ${index + 1}</legend>
+                      <label>
+                          <strong>Type:</strong>
+                          <input type="text" name="availabilities[${index}][type]" value="${
+                  availability.type
+                }">
+                      </label><br>
+                      <label>
+                          <strong>Start Hour:</strong>
+                          <input type="number" name="availabilities[${index}][start_hour]" value="${
+                  availability.start_hour
+                }">
+                      </label><br>
+                      <label>
+                          <strong>Start Minute:</strong>
+                          <input type="number" name="availabilities[${index}][start_minute]" value="${
+                  availability.start_minute
+                }">
+                      </label><br>
+                      <label>
+                          <strong>End Hour:</strong>
+                          <input type="number" name="availabilities[${index}][end_hour]" value="${
+                  availability.end_hour
+                }">
+                      </label><br>
+                      <label>
+                          <strong>End Minute:</strong>
+                          <input type="number" name="availabilities[${index}][end_minute]" value="${
+                  availability.end_minute
+                }">
+                      </label>
+                  </fieldset>
+              </div>
+          `
+              )
+              .join("");
 
-      setEventListener("click", "#microsoft", function () {
-        getOAuthUrl("microsoft")
-          .then(({ url }) => popout(url))
-          .then(function (msg) {
-            console.log("Received pop up results", msg);
-          });
-      });
+            document.getElementById("calendar_settings").innerHTML = `
+              <h2>Calendar Settings</h2>
+              <form id="settings_form">
+                  <label>
+                      <strong>Buffer:</strong>
+                      <input type="number" name="buffer" value="${
+                        settings.buffer
+                      }">
+                  </label><br>
+                  <label>
+                      <strong>Time Zone:</strong>
+                      <input type="text" name="time_zone" value="${
+                        settings.time_zone
+                      }">
+                  </label><br>
+                  <label>
+                      <strong>Allow Same Day:</strong>
+                      <input type="checkbox" name="allow_same_day" ${
+                        settings.allow_same_day ? "checked" : ""
+                      }>
+                  </label><br>
+                  <label>
+                      <strong>Max Days Ahead:</strong>
+                      <input type="number" name="max_days_ahead" value="${
+                        settings.max_days_ahead
+                      }">
+                  </label><br>
+                  <label>
+                      <strong>Minimum Notice:</strong>
+                      <input type="number" name="minimum_notice" value="${
+                        settings.minimum_notice
+                      }">
+                  </label><br>
+                  <label>
+                      <strong>Availabilities:</strong>
+                      <div class="availabilities-container" id="availabilities_container">
+                          ${availabilitiesList}
+                      </div>
+                  </label><br>
+                  <button type="button" @click.prevent="addAvailability">Add Availability</button><br><br>
+                  <button type="submit">Update Settings</button>
+              </form>
+          `;
 
-      const headers = new Headers({
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`, // replace with your token
-      });
-
-      async function getCalendar() {
-        return fetch(`${API_HOST}/calendar/`, { headers }).then(function (res) {
-          return res.json();
-        });
-      }
-
-      async function getOAuthUrl(provider) {
-        return fetch(
-          `${API_HOST}/calendar/oauth/${provider}?login_hint=${getLoginHint()}`,
-          { headers }
-        ).then(function (res) {
-          return res.json();
-        });
-      }
-
-      async function getConnectableCalendars() {
-        return fetch(`${API_HOST}/calendar/connectable/`, { headers }).then(
-          function (res) {
-            return res.json();
-          }
-        );
-      }
-
-      async function getSettings() {
-        return fetch(`${API_HOST}/calendar/settings/`, { headers }).then(
-          function (res) {
-            return res.json();
-          }
-        );
-      }
-
-      async function updateSettings(settings) {
-        // Here you would update the settings, e.g., send them to a server
-        console.log("Updating settings...", settings);
-        return fetch(`${API_HOST}/calendar/settings`, {
-          headers,
-          method: "PUT",
-          body: JSON.stringify(settings),
-        }).then(function (res) {
-          return res.json();
-        });
-      }
-
-      async function connectCalendar(identifier) {
-        return fetch(`${API_HOST}/calendar/${identifier}`, {
-          headers,
-          method: "POST",
-        }).then(function (res) {
-          return res.json();
-        });
-      }
-
-      async function disconnectCalendar() {
-        return fetch(`${API_HOST}/calendar`, {
-          headers,
-          method: "DELETE",
-        }).then(function (res) {
-          return res.json();
-        });
-      }
-
-      document.addEventListener("DOMContentLoaded", function () {
-        getCalendar().then((data) => {
-          console.log({ data });
-          renderCalendar(data);
-        });
-      });
-
-      setEventListener("click", "#connectable", function () {
-        getConnectableCalendars().then(function (data) {
-          connectable_entries = data.entries;
-          renderConnectableEntries(data.entries);
-          if (data.entries.length > 0) {
-            enable("connect");
-          } else {
-            disable("connect");
-          }
-          console.log("Connectable entries", data);
-        });
-      });
-
-      setEventListener("click", "#connect", function () {
-        connectCalendar(connectable_entries[0].identifier).then(function (
-          data
-        ) {
-          console.log("Connect results", data);
-          renderCalendar(data);
-          if (data.connected) {
-            disable("connect");
-            enable("disconnect");
-            enable("settings");
-          } else {
-            disable("disconnect");
-            disable("settings");
-          }
-        });
-      });
-
-      setEventListener("click", "#disconnect", function () {
-        disconnectCalendar().then(function (data) {
-          console.log("Disconnect results", data);
-          renderCalendar(data);
-          if (!data.connected) {
-            disable("connect");
-            disable("connectable");
-            renderConnectableEntries([]);
-          }
-        });
-      });
-
-      setEventListener("click", "#settings", function () {
-        getSettings().then(function (data) {
-          console.log("Settings results", data);
-          settings = data;
-          renderCalendarSettings(settings);
-        });
-      });
+            document
+              .getElementById("settings_form")
+              .addEventListener("submit", async (event) => {
+                event.preventDefault();
+                const formData = new FormData(event.target);
+                const updatedSettings = {};
+                formData.forEach((value, key) => {
+                  const keys = key.split("[").map((k) => k.replace("]", ""));
+                  if (keys.length > 1) {
+                    if (!updatedSettings[keys[0]]) {
+                      updatedSettings[keys[0]] = [];
+                    }
+                    const index = parseInt(keys[1]);
+                    if (!updatedSettings[keys[0]][index]) {
+                      updatedSettings[keys[0]][index] = {};
+                    }
+                    updatedSettings[keys[0]][index][keys[2]] = value;
+                  } else {
+                    updatedSettings[key] = value;
+                  }
+                });
+                updatedSettings.allow_same_day =
+                  formData.get("allow_same_day") !== null;
+                await this.updateSettings(updatedSettings);
+                this.settings = updatedSettings;
+                this.renderCalendarSettings(this.settings);
+              });
+          },
+          addAvailability() {
+            this.settings.availabilities.push({
+              type: "",
+              end_hour: 0,
+              end_minute: 0,
+              start_hour: 0,
+              start_minute: 0,
+            });
+            this.renderCalendarSettings(this.settings);
+          },
+          async updateSettings(settings) {
+            const response = await fetch(`${API_HOST}/calendar/settings`, {
+              headers: this.headers,
+              method: "PUT",
+              body: JSON.stringify(settings),
+            });
+            return response.json();
+          },
+        },
+        computed: {
+          headers() {
+            return new Headers({
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`, // replace with your token
+            });
+          },
+        },
+        mounted() {
+          this.getCalendar().then(this.renderCalendar);
+        },
+      }).mount("#app");
     </script>
   </body>
 </html>
