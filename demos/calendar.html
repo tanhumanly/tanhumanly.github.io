@@ -231,12 +231,10 @@
               window.addEventListener("message", (msg) => {
                 popup.close();
                 this.getCalendar();
-                this.dataLoaded = true;
                 resolve(msg.data);
               });
               setTimeout(() => {
                 popup.close();
-                this.dataLoaded = true;
                 reject("Timeout");
               }, 150000);
             });
@@ -273,14 +271,19 @@
             this.dataLoaded = true;
           },
           async listConnectableCalendars() {
-            const response = await fetch(`${API_HOST}/calendar/connectable/`, {
-              headers: this.headers,
-            });
-            const data = await response.json();
-            this.connectableEntries = data.entries;
+            try {
+              const response = await fetch(`${API_HOST}/calendar/connectable/`, {
+                headers: this.headers,
+              });
+              const data = await response.json();
+              this.connectableEntries = data.entries || [];
 
-            if (this.connectableEntries.length === 1) {
-              await this.connectCalendar(this.connectableEntries[0].identifier);
+              if (this.connectableEntries.length === 1) {
+                await this.connectCalendar(this.connectableEntries[0].identifier);
+              }
+            } catch (error) {
+              console.error(error);
+              this.connectableEntries = []
             }
           },
           async getCalendarSettings() {
@@ -306,6 +309,7 @@
             });
             this.calendar = await response.json();
             this.connectableEntries = [];
+            this.dataLoaded = true;
           },
           shortenString(str, maxLength = 16) {
             if (str && str.length > maxLength) {
