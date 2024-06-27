@@ -20,6 +20,11 @@
       .status + .status {
         margin-top: 1rem;
       }
+
+      .availability-item fieldset {
+        display: flex;
+        gap: 0.5rem;
+      }
     </style>
   </head>
   <body>
@@ -217,33 +222,109 @@
         `;
       }
 
-      function renderCalendarSettings(settings) {
+    function renderCalendarSettings(settings) {
         const container = document.getElementById("calendar_settings");
 
-        const availabilitiesList = settings.availabilities.map(availability => `
-            <li>
-                <strong>Type:</strong> ${availability.type} <br>
-                <strong>Start Time:</strong> ${availability.start_hour}:${availability.start_minute.toString().padStart(2, '0')} <br>
-                <strong>End Time:</strong> ${availability.end_hour}:${availability.end_minute.toString().padStart(2, '0')}
-            </li>
+        const availabilitiesList = settings.availabilities.map((availability, index) => `
+            <div class="availability-item">
+                <fieldset>
+                    <legend>Availability ${index + 1}</legend>
+                    <label>
+                        <strong>Type:</strong>
+                        <input type="text" name="availabilities[${index}][type]" value="${availability.type}">
+                    </label><br>
+                    <label>
+                        <strong>Start Hour:</strong>
+                        <input type="number" name="availabilities[${index}][start_hour]" value="${availability.start_hour}">
+                    </label><br>
+                    <label>
+                        <strong>Start Minute:</strong>
+                        <input type="number" name="availabilities[${index}][start_minute]" value="${availability.start_minute}">
+                    </label><br>
+                    <label>
+                        <strong>End Hour:</strong>
+                        <input type="number" name="availabilities[${index}][end_hour]" value="${availability.end_hour}">
+                    </label><br>
+                    <label>
+                        <strong>End Minute:</strong>
+                        <input type="number" name="availabilities[${index}][end_minute]" value="${availability.end_minute}">
+                    </label>
+                </fieldset>
+            </div>
         `).join("");
 
         container.innerHTML = `
             <h2>Calendar Settings</h2>
-            <ul>
-                <li><strong>Buffer:</strong> ${settings.buffer}</li>
-                <li><strong>Time Zone:</strong> ${settings.time_zone}</li>
-                <li><strong>Allow Same Day:</strong> ${settings.allow_same_day}</li>
-                <li><strong>Max Days Ahead:</strong> ${settings.max_days_ahead}</li>
-                <li><strong>Minimum Notice:</strong> ${settings.minimum_notice}</li>
-                <li><strong>Availabilities:</strong>
-                    <ul>
+            <form id="settings_form">
+                <label>
+                    <strong>Buffer:</strong>
+                    <input type="number" name="buffer" value="${settings.buffer}">
+                </label><br>
+                <label>
+                    <strong>Time Zone:</strong>
+                    <input type="text" name="time_zone" value="${settings.time_zone}">
+                </label><br>
+                <label>
+                    <strong>Allow Same Day:</strong>
+                    <input type="checkbox" name="allow_same_day" ${settings.allow_same_day ? 'checked' : ''}>
+                </label><br>
+                <label>
+                    <strong>Max Days Ahead:</strong>
+                    <input type="number" name="max_days_ahead" value="${settings.max_days_ahead}">
+                </label><br>
+                <label>
+                    <strong>Minimum Notice:</strong>
+                    <input type="number" name="minimum_notice" value="${settings.minimum_notice}">
+                </label><br>
+                <label>
+                    <strong>Availabilities:</strong>
+                    <div class="availabilities-container" id="availabilities_container">
                         ${availabilitiesList}
-                    </ul>
-                </li>
-            </ul>
+                    </div>
+                </label><br>
+                <button type="button" onclick="addAvailability()">Add Availability</button><br><br>
+                <button type="submit">Update Settings</button>
+            </form>
         `;
-      }
+
+        setEventListener("submit", "#settings_form", async function(event) {
+            event.preventDefault();
+            const formData = new FormData(event.target);
+            const updatedSettings = {};
+            formData.forEach((value, key) => {
+                const keys = key.split('[').map(k => k.replace(']', ''));
+                if (keys.length > 1) {
+                    if (!updatedSettings[keys[0]]) {
+                        updatedSettings[keys[0]] = [];
+                    }
+                    const index = parseInt(keys[1]);
+                    if (!updatedSettings[keys[0]][index]) {
+                        updatedSettings[keys[0]][index] = {};
+                    }
+                    updatedSettings[keys[0]][index][keys[2]] = value;
+                } else {
+                    updatedSettings[key] = value;
+                }
+            });
+
+            updatedSettings.allow_same_day = formData.get('allow_same_day') !== null;
+
+            await updateSettings(updatedSettings);
+            settings = updatedSettings; // Update the settings with the new values
+            renderCalendarSettings(settings); // Re-render the form with updated values
+        });
+    }
+
+    function addAvailability() {
+        settings.availabilities.push({
+            "type": "",
+            "end_hour": 0,
+            "end_minute": 0,
+            "start_hour": 0,
+            "start_minute": 0
+        });
+        renderCalendarSettings(settings);
+    }
 
 
       const origin = encodeURIComponent(window.location.href);
@@ -314,6 +395,18 @@
           }
         );
       }
+
+      async function updateSettings(settings) {
+        // Here you would update the settings, e.g., send them to a server
+        console.log("Updating settings...", settings);
+        return fetch(`${API_HOST}/calendar/settings`, {
+          headers,
+          method: "PUT",
+          body: JSON.stringify(settings),
+        }).then(function (res) {
+          return res.json();
+        });
+    }
 
       async function connectCalendar(identifier) {
         return fetch(`${API_HOST}/calendar/${identifier}`, {
