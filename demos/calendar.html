@@ -9,34 +9,39 @@
   </head>
   <body>
     <div id="app">
-      <main>
+      <main class="max-w-7xl p-4">
         <div v-if="calendar" class="calendar">
           <h2>Calendar</h2>
           <div>
-            <p class="status" :class="statusClass">
-              <strong>Status:</strong> {{ calendarStatusText }}
+            <p class="p-4 rounded-md" :class="statusClass">
+              <strong
+                >{{ calendarStatusText }} {{ calendar.label }}
+                <button
+                  type="button"
+                  class="bg-rose-500"
+                  @click="disconnectCalendar"
+                  v-show="calendarConnected"
+                  title="Require calendar connected"
+                >
+                  Disconnect
+                </button></strong
+              >
             </p>
-            <p><strong>Connected:</strong> {{ calendar.connected }}</p>
-            <p>
-              <strong>Identifier:</strong> {{ shortenString(calendar.identifier)
-              }}
-            </p>
-            <p><strong>Label:</strong> {{ calendar.label }}</p>
-            <p><strong>Type:</strong> {{ calendar.type }}</p>
           </div>
         </div>
 
-        <div>
-          <label for="login_hint">Login Hint</label>
-          <input
-            type="text"
-            id="login_hint"
-            v-model="loginHint"
-            class="w-full max-w-96"
-          />
+        <div v-show="!oauthLinked">
+          <label for="login_hint"
+            ><strong>Login Hint</strong>
+            <input
+              type="text"
+              id="login_hint"
+              v-model="loginHint"
+              class="w-full max-w-96"
+          /></label>
         </div>
 
-        <div class="mt-4 flex gap-2">
+        <div v-show="!oauthLinked" class="mt-4 flex gap-2">
           <button
             type="button"
             @click="linkCalendar('google')"
@@ -51,37 +56,33 @@
           >
             Link calendar with Microsoft
           </button>
-          <button
-            type="button"
-            class="bg-rose-500"
-            @click="disconnectCalendar"
-            :disabled="!calendarConnected"
-            title="Require OAuth linked"
-          >
-            Disconnect
-          </button>
         </div>
-        <br />
 
         <div id="connectable_entries" v-if="oauthLinked && !calendarConnected">
-          <h2>Connectable Entries</h2>
+          <h2>Select a calendar to connect</h2>
           <ul>
             <li
               v-for="(entry, index) in connectableEntries"
               :key="entry.identifier"
-              class="status"
+              class="mt-4 bg-gray-100 p-4 rounded-md"
             >
-              <strong>Label:</strong> {{ entry.label }} <br />
-              <strong>Primary:</strong> {{ entry.primary }} <br />
-              <strong>Identifier:</strong> {{ shortenString(entry.identifier) }}
               <button
                 type="button"
+                class="bg-teal-500 mr-4"
                 @click="connectCalendar(entry.identifier)"
                 :disabled="!oauthLinked || calendarConnected"
                 title="Require OAuth linked"
               >
                 Connect
               </button>
+              <strong
+                >{{ entry.label }}
+                <span
+                  v-if="entry.primary"
+                  class="inline-flex items-center rounded-md bg-green-500/10 px-2 py-1 text-xs font-medium text-green-400 ring-1 ring-inset ring-green-500/20"
+                  >Primary</span
+                ></strong
+              >
             </li>
           </ul>
         </div>
@@ -96,29 +97,29 @@
             <fieldset class="flex gap-2 w-full">
               <legend>Commons</legend>
               <label>
-                <strong>Buffer:</strong>
+                <strong>Buffer</strong>
                 <input type="number" v-model="settings.buffer" /> </label
               ><br />
               <label>
-                <strong>Time Zone:</strong>
+                <strong>Time Zone</strong>
                 <input type="text" v-model="settings.time_zone" /> </label
               ><br />
               <label>
-                <strong>Allow Same Day:</strong>
+                <strong>Allow Same Day</strong>
                 <input
                   type="checkbox"
                   v-model="settings.allow_same_day"
                 /> </label
               ><br />
               <label>
-                <strong>Max Days Ahead:</strong>
+                <strong>Max Days Ahead</strong>
                 <input
                   type="number"
                   v-model="settings.max_days_ahead"
                 /> </label
               ><br />
               <label>
-                <strong>Minimum Notice:</strong>
+                <strong>Minimum Notice</strong>
                 <input type="number" v-model="settings.minimum_notice" />
               </label>
             </fieldset>
@@ -129,23 +130,23 @@
               <fieldset class="flex gap-2 w-full">
                 <legend>Availability {{ index + 1 }}</legend>
                 <label>
-                  <strong>Type:</strong>
+                  <strong>Type</strong>
                   <input type="text" v-model="availability.type" />
                 </label>
                 <label>
-                  <strong>Start Hour:</strong>
+                  <strong>Start Hour</strong>
                   <input type="number" v-model="availability.start_hour" />
                 </label>
                 <label>
-                  <strong>Start Minute:</strong>
+                  <strong>Start Minute</strong>
                   <input type="number" v-model="availability.start_minute" />
                 </label>
                 <label>
-                  <strong>End Hour:</strong>
+                  <strong>End Hour</strong>
                   <input type="number" v-model="availability.end_hour" />
                 </label>
                 <label>
-                  <strong>End Minute:</strong>
+                  <strong>End Minute</strong>
                   <input type="number" v-model="availability.end_minute" />
                 </label>
               </fieldset>
@@ -184,9 +185,9 @@
           "⚠️ Microsoft OAuth linked, not connected",
         [CalendarStatus.NO_OAUTH_LINKED]: "❌ No OAuth linked",
         [CalendarStatus.GOOGLE_CALENDAR_CONNECTED]:
-          "✅ Google calendar connected",
+          "✅ Google calendar connected to ",
         [CalendarStatus.MICROSOFT_CALENDAR_CONNECTED]:
-          "✅ Microsoft calendar connected",
+          "✅ Microsoft calendar connected to ",
         [CalendarStatus.NO_CALENDAR]: "",
       };
 
@@ -371,24 +372,5 @@
       }).mount("#app");
     </script>
     <link rel="stylesheet" href="https://unpkg.com/boltcss/bolt.min.css" />
-    <style>
-      main {
-        padding: 2rem;
-      }
-      .status {
-        border: 1px solid gray;
-        padding: 0.5rem;
-        border-radius: 4px;
-        list-style: none;
-      }
-
-      .status + .status {
-        margin-top: 1rem;
-      }
-
-      label strong + input {
-        margin-left: 0.5rem !important;
-      }
-    </style>
   </body>
 </html>
