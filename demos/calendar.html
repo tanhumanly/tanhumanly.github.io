@@ -222,59 +222,83 @@
         `;
       }
 
-    function renderCalendarSettings(settings) {
+      function renderCalendarSettings(settings) {
         const container = document.getElementById("calendar_settings");
 
-        const availabilitiesList = settings.availabilities.map((availability, index) => `
+        const availabilitiesList = settings.availabilities
+          .map(
+            (availability, index) => `
             <div class="availability-item">
                 <fieldset>
                     <legend>Availability ${index + 1}</legend>
                     <label>
                         <strong>Type:</strong>
-                        <input type="text" name="availabilities[${index}][type]" value="${availability.type}">
+                        <input type="text" name="availabilities[${index}][type]" value="${
+              availability.type
+            }">
                     </label><br>
                     <label>
                         <strong>Start Hour:</strong>
-                        <input type="number" name="availabilities[${index}][start_hour]" value="${availability.start_hour}">
+                        <input type="number" name="availabilities[${index}][start_hour]" value="${
+              availability.start_hour
+            }">
                     </label><br>
                     <label>
                         <strong>Start Minute:</strong>
-                        <input type="number" name="availabilities[${index}][start_minute]" value="${availability.start_minute}">
+                        <input type="number" name="availabilities[${index}][start_minute]" value="${
+              availability.start_minute
+            }">
                     </label><br>
                     <label>
                         <strong>End Hour:</strong>
-                        <input type="number" name="availabilities[${index}][end_hour]" value="${availability.end_hour}">
+                        <input type="number" name="availabilities[${index}][end_hour]" value="${
+              availability.end_hour
+            }">
                     </label><br>
                     <label>
                         <strong>End Minute:</strong>
-                        <input type="number" name="availabilities[${index}][end_minute]" value="${availability.end_minute}">
+                        <input type="number" name="availabilities[${index}][end_minute]" value="${
+              availability.end_minute
+            }">
                     </label>
                 </fieldset>
             </div>
-        `).join("");
+        `
+          )
+          .join("");
 
         container.innerHTML = `
             <h2>Calendar Settings</h2>
             <form id="settings_form">
                 <label>
                     <strong>Buffer:</strong>
-                    <input type="number" name="buffer" value="${settings.buffer}">
+                    <input type="number" name="buffer" value="${
+                      settings.buffer
+                    }">
                 </label><br>
                 <label>
                     <strong>Time Zone:</strong>
-                    <input type="text" name="time_zone" value="${settings.time_zone}">
+                    <input type="text" name="time_zone" value="${
+                      settings.time_zone
+                    }">
                 </label><br>
                 <label>
                     <strong>Allow Same Day:</strong>
-                    <input type="checkbox" name="allow_same_day" ${settings.allow_same_day ? 'checked' : ''}>
+                    <input type="checkbox" name="allow_same_day" ${
+                      settings.allow_same_day ? "checked" : ""
+                    }>
                 </label><br>
                 <label>
                     <strong>Max Days Ahead:</strong>
-                    <input type="number" name="max_days_ahead" value="${settings.max_days_ahead}">
+                    <input type="number" name="max_days_ahead" value="${
+                      settings.max_days_ahead
+                    }">
                 </label><br>
                 <label>
                     <strong>Minimum Notice:</strong>
-                    <input type="number" name="minimum_notice" value="${settings.minimum_notice}">
+                    <input type="number" name="minimum_notice" value="${
+                      settings.minimum_notice
+                    }">
                 </label><br>
                 <label>
                     <strong>Availabilities:</strong>
@@ -287,45 +311,45 @@
             </form>
         `;
 
-        setEventListener("submit", "#settings_form", async function(event) {
-            event.preventDefault();
-            const formData = new FormData(event.target);
-            const updatedSettings = {};
-            formData.forEach((value, key) => {
-                const keys = key.split('[').map(k => k.replace(']', ''));
-                if (keys.length > 1) {
-                    if (!updatedSettings[keys[0]]) {
-                        updatedSettings[keys[0]] = [];
-                    }
-                    const index = parseInt(keys[1]);
-                    if (!updatedSettings[keys[0]][index]) {
-                        updatedSettings[keys[0]][index] = {};
-                    }
-                    updatedSettings[keys[0]][index][keys[2]] = value;
-                } else {
-                    updatedSettings[key] = value;
-                }
-            });
+        setEventListener("submit", "#settings_form", async function (event) {
+          event.preventDefault();
+          const formData = new FormData(event.target);
+          const updatedSettings = {};
+          formData.forEach((value, key) => {
+            const keys = key.split("[").map((k) => k.replace("]", ""));
+            if (keys.length > 1) {
+              if (!updatedSettings[keys[0]]) {
+                updatedSettings[keys[0]] = [];
+              }
+              const index = parseInt(keys[1]);
+              if (!updatedSettings[keys[0]][index]) {
+                updatedSettings[keys[0]][index] = {};
+              }
+              updatedSettings[keys[0]][index][keys[2]] = value;
+            } else {
+              updatedSettings[key] = value;
+            }
+          });
 
-            updatedSettings.allow_same_day = formData.get('allow_same_day') !== null;
+          updatedSettings.allow_same_day =
+            formData.get("allow_same_day") !== null;
 
-            await updateSettings(updatedSettings);
-            settings = updatedSettings; // Update the settings with the new values
-            renderCalendarSettings(settings); // Re-render the form with updated values
+          await updateSettings(updatedSettings);
+          settings = updatedSettings; // Update the settings with the new values
+          renderCalendarSettings(settings); // Re-render the form with updated values
         });
-    }
+      }
 
-    function addAvailability() {
+      function addAvailability() {
         settings.availabilities.push({
-            "type": "",
-            "end_hour": 0,
-            "end_minute": 0,
-            "start_hour": 0,
-            "start_minute": 0
+          type: "",
+          end_hour: 0,
+          end_minute: 0,
+          start_hour: 0,
+          start_minute: 0,
         });
         renderCalendarSettings(settings);
-    }
-
+      }
 
       const origin = encodeURIComponent(window.location.href);
       // const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRlc3RzK2FwcEBodW1hbmx5LmlvIiwiZXhwIjoyMzE4MDc2MDAzLCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.Ms0F8w_fpH_c0QKee2bm5YIW0lKV2-zrY9LNAOvxbp8";
@@ -406,7 +430,7 @@
         }).then(function (res) {
           return res.json();
         });
-    }
+      }
 
       async function connectCalendar(identifier) {
         return fetch(`${API_HOST}/calendar/${identifier}`, {
