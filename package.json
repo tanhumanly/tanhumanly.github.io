@@ -1,0 +1,32 @@
+{
+  "name": "tanhumanly.github.io",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "proxy": "nodemon proxy.mjs",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tanhumanly/tanhumanly.github.io.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/tanhumanly/tanhumanly.github.io/issues"
+  },
+  "homepage": "https://github.com/tanhumanly/tanhumanly.github.io#readme",
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "cors-anywhere": "^0.4.4",
+    "express": "^4.19.2",
+    "http-proxy-middleware": "^3.0.0",
+    "https": "^1.0.0",
+    "morgan": "^1.10.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.1.4"
+  }
+}
