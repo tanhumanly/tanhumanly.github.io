@@ -4,7 +4,6 @@ import morgan from "morgan";
 import bodyParser from "body-parser";
 import cors from "cors";
 import chalk from "chalk";
-import path from "path";
 
 const app = express();
 
@@ -35,7 +34,10 @@ const logHeaders = (headers, prefix = "") => {
 // Function to forward requests
 const forwardRequest = async (req, res) => {
   try {
-    const url = `${TARGET_SERVER}${req.originalUrl}`;
+    const targetServer = req.headers["x-target-server"] || TARGET_SERVER;
+    const fakeOrigin = req.headers["x-fake-origin"] || FAKE_ORIGIN;
+
+    const url = `${targetServer}${req.originalUrl}`;
     const headers = { ...req.headers };
     delete headers["host"]; // Remove the host header to avoid conflict with the target server
 
@@ -51,8 +53,8 @@ const forwardRequest = async (req, res) => {
     logHeaders(headers, "    ");
 
     // Optionally fake the origin
-    if (FAKE_ORIGIN) {
-      headers["origin"] = FAKE_ORIGIN;
+    if (fakeOrigin) {
+      headers["origin"] = fakeOrigin;
     }
 
     const response = await axios({
