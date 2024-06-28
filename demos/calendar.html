@@ -173,8 +173,9 @@
       const { createApp } = Vue;
 
       const defaultEnv = {
-        API_HOST: "https://tan-api.internal.humanly.dev",
-        TOKEN: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRhbkBodW1hbmx5LmlvIiwiZXhwIjoyMzE5MjkwODA2LCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.mL-s5WFQrgdX-2uuGfIFvXpSNC5LC97XGP3IXtcOGog"
+        API_HOST: "https://forward-cors.vercel.app",
+        TOKEN: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6InRhbkBodW1hbmx5LmlvIiwiZXhwIjoyMzE5MjkwODA2LCJ0ZWFtX2lkIjo2NiwidXNlcl91dWlkIjoiOGI5MzE3ZjYtNDMzYy00NjMxLWE0YmItMDE4ZjY1MDI3MTBkIn0.mL-s5WFQrgdX-2uuGfIFvXpSNC5LC97XGP3IXtcOGog",
+        TARGET_SERVER: "https://tan-api.internal.humanly.dev",
       };
 
       function getVar(name) {
@@ -358,6 +359,7 @@
           headers() {
             return new Headers({
               "Content-Type": "application/json",
+              "x-target-server": getVar('TARGET_SERVER'),
               Authorization: `Bearer ${token}`, // replace with your token
             });
           },

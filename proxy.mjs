@@ -4,6 +4,7 @@ import morgan from "morgan";
 import bodyParser from "body-parser";
 import cors from "cors";
 import chalk from "chalk";
+import https from "https";
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(morgan("dev"));
 
 // Setup CORS to allow all origins
 app.use(cors());
+
 
 // Middleware to parse JSON and URL-encoded bodies
 app.use(bodyParser.json());
@@ -57,12 +59,17 @@ const forwardRequest = async (req, res) => {
       headers["origin"] = fakeOrigin;
     }
 
+    const agent = new https.Agent({
+      rejectUnauthorized: false
+    });
+
     const response = await axios({
       method: req.method,
       url,
       headers,
       data: req.body,
       params: req.query,
+      httpsAgent: agent
     });
 
     console.log(
@@ -74,6 +81,9 @@ const forwardRequest = async (req, res) => {
     );
 
     console.log(JSON.stringify(response.data, null, 2));
+
+    res.header("x-target-server", targetServer);
+    res.header("x-fake-origin", fakeOrigin);
 
     res.status(response.status).json(response.data);
   } catch (error) {
@@ -93,6 +103,6 @@ app.use("*", forwardRequest);
 const PORT = process.env.PORT || 7001;
 app.listen(PORT, () => {
   console.log(
-    chalk.blue(`Proxying http://localhost:${PORT} -> ${TARGET_SERVER}`)
+    chalk.blue(`Proxying http://localhost:${PORT} -> ${TARGET_SERVER} unless request overwrite the target server with the X-Target-Server header`)
   );
 });
